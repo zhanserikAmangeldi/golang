@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"encoding/json"
 )
@@ -11,9 +12,10 @@ import (
 const tasksFileName = "tasks.json"
 
 type Task struct {
-	ID        int
-	Name      string
-	Completed bool
+	ID         int
+	Name       string
+	Completed  bool
+	Created_at string
 }
 
 func loadTasks() ([]Task, error) {
@@ -49,9 +51,10 @@ func createTask(name string) error {
 
 	id := len(tasks) + 1
 	task := Task{
-		ID:        id,
-		Name:      name,
-		Completed: false,
+		ID:         id,
+		Name:       name,
+		Completed:  false,
+		Created_at: time.Now().Format("2006/1/2 15:04"),
 	}
 
 	tasks = append(tasks, task)
