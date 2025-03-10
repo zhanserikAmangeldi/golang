@@ -1,5 +1,8 @@
 package main
 
+// Working with Json: https://medium.com/kanoteknologi/better-way-to-read-and-write-json-file-in-golang-9d575b7254f2
+// UUID: https://pkg.go.dev/github.com/google/uuid (I do not use it because I want to keep the task id simple)
+
 import (
 	"fmt"
 	"os"
@@ -56,7 +59,7 @@ func createTask(name string, categories []string) error {
 	var uniqueCategories []string
 	for _, cat := range categories {
 		lowerCat := strings.ToLower(cat)
-		if _, ok := categoryMap[lowerCat]; !ok {
+		if !categoryMap[lowerCat] {
 			categoryMap[lowerCat] = true
 			uniqueCategories = append(uniqueCategories, lowerCat)
 		}
@@ -68,7 +71,7 @@ func createTask(name string, categories []string) error {
 		Name:       name,
 		Completed:  false,
 		Created_at: time.Now().Format("2006/1/2 15:04"),
-		Categories: categories,
+		Categories: uniqueCategories,
 	}
 
 	tasks = append(tasks, task)
@@ -126,6 +129,13 @@ func completeTask(id int) error {
 	return saveTasks(tasks)
 }
 
+func reindexTaskIDs(tasks []Task) []Task {
+	for i := range tasks {
+		tasks[i].ID = i + 1
+	}
+	return tasks
+}
+
 func deleteTask(id int) error {
 	tasks, err := loadTasks()
 	if err != nil {
@@ -138,6 +148,8 @@ func deleteTask(id int) error {
 			break
 		}
 	}
+
+	tasks = reindexTaskIDs(tasks)
 
 	return saveTasks(tasks)
 }
