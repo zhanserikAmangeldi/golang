@@ -16,6 +16,7 @@ type Task struct {
 	Name       string
 	Completed  bool
 	Created_at string
+	Categories []string
 }
 
 func loadTasks() ([]Task, error) {
@@ -42,7 +43,7 @@ func saveTasks(tasks []Task) error {
 	return os.WriteFile(tasksFileName, data, 0644)
 }
 
-func createTask(name string) error {
+func createTask(name string, categories []string) error {
 	tasks, err := loadTasks()
 	fmt.Println(tasks)
 	if err != nil {
@@ -55,6 +56,7 @@ func createTask(name string) error {
 		Name:       name,
 		Completed:  false,
 		Created_at: time.Now().Format("2006/1/2 15:04"),
+		Categories: categories,
 	}
 
 	tasks = append(tasks, task)
@@ -62,13 +64,28 @@ func createTask(name string) error {
 	return saveTasks(tasks)
 }
 
-func listTasks() error {
+func listTasks(category string) error {
 	tasks, err := loadTasks()
 	if err != nil {
 		return err
 	}
 
-	for _, task := range tasks {
+	filteredTasks := []Task{}
+
+	if category == "" {
+		filteredTasks = tasks
+	} else {
+		for _, task := range tasks {
+			for _, cat := range task.Categories {
+				if cat == category {
+					filteredTasks = append(filteredTasks, task)
+					break
+				}
+			}
+		}
+	}
+	for _, task := range filteredTasks {
+
 		status := " "
 		if task.Completed {
 			status = "X"
@@ -126,16 +143,18 @@ func main() {
 			return
 		}
 		name := os.Args[2]
-		if err := createTask(name); err != nil {
+		categories := os.Args[3:]
+		if err := createTask(name, categories); err != nil {
 			fmt.Println("Error creating task:", err)
 			return
 		}
 	case "list":
-		if len(os.Args) > 2 {
+		if len(os.Args) < 3 {
 			fmt.Println("Usage: go run main.go list")
 			return
 		}
-		if err := listTasks(); err != nil {
+		category := os.Args[2]
+		if err := listTasks(category); err != nil {
 			fmt.Println("Error listing tasks:", err)
 			return
 		}
