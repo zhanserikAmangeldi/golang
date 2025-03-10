@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"encoding/json"
@@ -50,6 +51,17 @@ func createTask(name string, categories []string) error {
 		return err
 	}
 
+	categoryMap := make(map[string]bool)
+
+	var uniqueCategories []string
+	for _, cat := range categories {
+		lowerCat := strings.ToLower(cat)
+		if _, ok := categoryMap[lowerCat]; !ok {
+			categoryMap[lowerCat] = true
+			uniqueCategories = append(uniqueCategories, lowerCat)
+		}
+	}
+
 	id := len(tasks) + 1
 	task := Task{
 		ID:         id,
@@ -70,6 +82,7 @@ func listTasks(category string) error {
 		return err
 	}
 
+	category = strings.ToLower(category)
 	filteredTasks := []Task{}
 
 	if category == "" {
@@ -84,6 +97,7 @@ func listTasks(category string) error {
 			}
 		}
 	}
+
 	for _, task := range filteredTasks {
 
 		status := " "
@@ -149,11 +163,14 @@ func main() {
 			return
 		}
 	case "list":
-		if len(os.Args) < 3 {
-			fmt.Println("Usage: go run main.go list")
+		if len(os.Args) > 3 {
+			fmt.Println("Usage: go run main.go list [category]")
 			return
 		}
-		category := os.Args[2]
+		var category string
+		if len(os.Args) > 2 {
+			category = os.Args[2]
+		}
 		if err := listTasks(category); err != nil {
 			fmt.Println("Error listing tasks:", err)
 			return
