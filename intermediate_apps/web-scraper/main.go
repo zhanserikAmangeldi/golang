@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/gocolly/colly"
 )
@@ -18,14 +17,33 @@ type Product struct {
 
 func main() {
 
+	pagesToScrape := []string{
+		"https://www.scrapingcourse.com/ecommerce/page/1/",
+		"https://www.scrapingcourse.com/ecommerce/page/2/",
+		"https://www.scrapingcourse.com/ecommerce/page/3/",
+		"https://www.scrapingcourse.com/ecommerce/page/4/",
+		"https://www.scrapingcourse.com/ecommerce/page/5/",
+		"https://www.scrapingcourse.com/ecommerce/page/6/",
+		"https://www.scrapingcourse.com/ecommerce/page/7/",
+		"https://www.scrapingcourse.com/ecommerce/page/8/",
+		"https://www.scrapingcourse.com/ecommerce/page/9/",
+		"https://www.scrapingcourse.com/ecommerce/page/10/",
+		"https://www.scrapingcourse.com/ecommerce/page/11/",
+		"https://www.scrapingcourse.com/ecommerce/page/12/",
+	}
+
 	var products []Product
-	var visitedUrls sync.Map
 
 	// Instantiate default collector
 	c := colly.NewCollector(
 		// Visit only domains: hackerspaces.org, wiki.hackerspaces.org
 		colly.AllowedDomains("www.scrapingcourse.com"),
+		colly.Async(true),
 	)
+
+	c.Limit(&colly.LimitRule{
+		Parallelism: 12,
+	})
 
 	// TODO: Add opportunity to avoid anti-bots algorithms there
 
@@ -40,49 +58,46 @@ func main() {
 		products = append(products, product)
 	})
 
-	c.OnHTML("a.next", func(e *colly.HTMLElement) {
-		nextPage := e.Attr("href")
-
-		if _, found := visitedUrls.Load(nextPage); !found {
-			fmt.Println("Scrapping: ", nextPage)
-
-			visitedUrls.Store(nextPage, struct{}{})
-
-			e.Request.Visit(nextPage)
-		}
+	c.OnRequest(func(r *colly.Request) {
+		fmt.Println("Visited: ", r.URL)
 	})
 
-	c.OnScraped(func(r *colly.Response) {
-		file, err := os.Create("output.csv")
-		if err != nil {
-			fmt.Println("Error when try to create output.csv file: ", err)
-		}
-		defer file.Close()
+	for _, pageToScrape := range pagesToScrape {
+		c.Visit(pageToScrape)
 
-		writer := csv.NewWriter(file)
+		c.OnScraped(func(r *colly.Response) {
+			file, err := os.Create("output.csv")
+			if err != nil {
+				fmt.Println("Error when try to create output.csv file: ", err)
+			}
+			defer file.Close()
 
-		header := []string{
-			"Url",
-			"Image",
-			"Name",
-			"Price",
-		}
+			writer := csv.NewWriter(file)
 
-		writer.Write(header)
-
-		for _, product := range products {
-			record := []string{
-				product.Url,
-				product.Image,
-				product.Name,
-				product.Price,
+			header := []string{
+				"Url",
+				"Image",
+				"Name",
+				"Price",
 			}
 
-			writer.Write(record)
-		}
+			writer.Write(header)
 
-		defer writer.Flush()
-	})
+			for _, product := range products {
+				record := []string{
+					product.Url,
+					product.Image,
+					product.Name,
+					product.Price,
+				}
 
-	c.Visit("https://www.scrapingcourse.com/ecommerce")
+				writer.Write(record)
+			}
+
+			defer writer.Flush()
+		})
+	}
+
+	c.Wait()
+
 }
